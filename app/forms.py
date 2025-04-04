@@ -9,5 +9,5 @@ class MovieForm(FlaskForm):
     description = TextAreaField('Description', validators=[DataRequired(message="Description is required.")])
     poster = FileField('Movie Poster', validators=[
         FileRequired(message="A movie poster is required."),
-        FileAllowed(['jpg', 'jpeg', 'png', 'gif'], message="Only image files are allowed (jpg, png, gif).")
+        FileAllowed(['jpg', 'jpeg', 'png'], message="Only image files are allowed (jpg, png, gif).")
     ])
