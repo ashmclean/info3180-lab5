@@ -5,8 +5,8 @@ Werkzeug Documentation:  https://werkzeug.palletsprojects.com/
 This file creates your application.
 """
 
-from app import app
-from flask import render_template, request, jsonify, send_file
+from app import app, db
+from flask import Flask, render_template, request, jsonify, send_file
 import os
 from werkzeug.utils import secure_filename
 from datetime import datetime
@@ -14,10 +14,13 @@ from app.forms import MovieForm
 from app.models import Movie
 from flask_migrate import Migrate
 from dotenv import load_dotenv
-
+from flask_cors import CORS
 ###
 # Routing for your application.
 ###
+
+app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 @app.route('/')
 def index():
