@@ -15,11 +15,18 @@ from app.models import Movie
 from flask_migrate import Migrate
 from dotenv import load_dotenv
 from flask_cors import CORS
+from flask_wtf.csrf import generate_csrf
+from flask_wtf.csrf import CSRFProtect, CSRFError
+csrf = CSRFProtect(app)
 ###
 # Routing for your application.
 ###
 
-CORS(app)  # Enable CORS for all routes
+CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
+
+app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
 
 @app.route('/')
 def index():
@@ -69,27 +76,27 @@ def page_not_found(error):
     """Custom 404 page."""
     return render_template('404.html'), 404
 
+@csrf.exempt
 @app.route('/api/v1/movies', methods=['POST'])
 def movies():
-    form = MovieForm()
+    if 'poster' not in request.files:
+        return jsonify({"errors": [{"poster": "Poster is required"}]}), 400
 
-    if form.validate_on_submit():
-        title = form.title.data
-        description = form.description.data
-        poster_file = form.poster.data
+    title = request.form.get('title')
+    description = request.form.get('description')
+    poster = request.files['poster']
 
-        filename = secure_filename(poster_file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        poster_file.save(filepath)
+    if not title or not description or poster.filename == '':
+        return jsonify({"errors": [{"form": "All fields are required."}]}), 400
 
-        movie = Movie(
-            title=title,
-            description=description,
-            poster=filename,
-            created_at=datetime.utcnow()
-        )
-        db.session.add(movie)
-        db.session.commit()
+    try:
+        filename = secure_filename(poster.filename)
+        poster.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
+        # Save to DB only if model is ready
+        # movie = Movie(title=title, description=description, poster=filename)
+        # db.session.add(movie)
+        # db.session.commit()
 
         return jsonify({
             "message": "Movie Successfully added",
@@ -97,5 +104,10 @@ def movies():
             "poster": filename,
             "description": description
         }), 201
-    else:
-        return jsonify({"errors": form_errors(form)}), 400
+
+    except Exception as e:
+        return jsonify({"errors": [{"exception": str(e)}]}), 500
+
+@app.route('/api/v1/csrf-token', methods=['GET'])
+def get_csrf():
+    return jsonify({"csrf_token": generate_csrf()})
