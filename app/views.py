@@ -19,7 +19,6 @@ from flask_cors import CORS
 # Routing for your application.
 ###
 
-app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
 @app.route('/')
