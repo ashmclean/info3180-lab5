@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 from flask_cors import CORS
 from flask_wtf.csrf import generate_csrf
 from flask_wtf.csrf import CSRFProtect, CSRFError
+
 csrf = CSRFProtect(app)
 ###
 # Routing for your application.
@@ -108,6 +109,27 @@ def movies():
     except Exception as e:
         return jsonify({"errors": [{"exception": str(e)}]}), 500
 
-@app.route('/api/v1/csrf-token', methods=['GET'])
-def get_csrf():
-    return jsonify({"csrf_token": generate_csrf()})
+#@app.route('/api/v1/csrf-token', methods=['GET'])
+#def get_csrf():
+ #   return jsonify({"csrf_token": generate_csrf()})
+
+@app.route('/api/v1/movies', methods=['GET'])
+def get_movies():
+    movies = Movie.query.all()
+    movies_list = []
+    for movie in movies:
+        movies_list.append({
+            "id": movie.id,
+            "title": movie.title,
+            "description": movie.description,
+            "poster": f"/api/v1/posters/{movie.poster}",
+        })
+    return jsonify({"movies":movies_list}), 200
+
+@app.route('/api/v1/posters/<filename>', methods=['GET'])
+def get_poster(filename):
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if os.path.exists(file_path):
+        return send_file(file_path)
+    else:
+        return jsonify({"error": "File not found"}), 404

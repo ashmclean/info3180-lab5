@@ -6,68 +6,55 @@
     <button type="submit">Add Movie</button>
   </form>
 </template>
-  
+
 <script setup>
-import { ref, onMounted } from 'vue'
-let csrf_token = ref('')
+import { ref, onMounted } from 'vue';
 
-const title = ref('');
-const description = ref('');
-const poster = ref(null);
+let title = ref('');
+let description = ref('');
+let poster = ref(null);
+let csrfToken = ref('');
 
-const handleFileUpload = (e) => {
-  poster.value = e.target.files[0];
+const handleFileUpload = (event) => {
+  poster.value = event.target.files[0];
 };
 
-
-const saveMovie = async () => {
-  let movieForm = document.getElementById('movieForm');
-  const formData = new FormData();
-  formData.append('title', title.value);
-  formData.append('description', description.value);
-  formData.append('poster', poster.value);
-
+const getCSRFToken = async () => {
   try {
-    const response = await fetch('/api/v1/movies', {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'X-CSRF-Token': csrf_token.value
-      }
-    });
-
-    const contentType = response.headers.get("content-type");
-    if (!response.ok) {
-      if (contentType && contentType.includes("application/json")) {
-        const errData = await response.json();
-        console.error("Error response:", errData);
-      } else {
-        const errText = await response.text();
-        console.error("Non-JSON error:", errText);
-      }
-      return;
-    }
-
-    const data = await response.json();
-    console.log("Movie Added!", data);
+    const res = await fetch("http://localhost:8080/api/v1/csrf-token"); // Use Flask port!
+    if (!res.ok) throw new Error("CSRF fetch failed");
+    const data = await res.json();
+    csrfToken.value = data.csrf_token;
+    console.log("CSRF token:", csrfToken.value);
   } catch (error) {
-    console.error("Network error:", error);
+    console.error("Non-JSON or failed response:", error);
   }
 };
 
-function getCsrfToken() {
-  fetch('/api/v1/csrf-token')
-    .then((response)=> response.json())
-    .then((data) => {
-      console.log(data)
-      csrf_token.value = data.csrf_token;
-    })
-}
+const saveMovie = async () => {
+  const formData = new FormData();
+  formData.append("title", title.value);
+  formData.append("description", description.value);
+  formData.append("poster", poster.value);
 
-onMounted(()=> {
-  getCsrfToken()
-});
+  try {
+    const res = await fetch("http://localhost:8080/api/v1/movies", {
+      method: "POST",
+      body: formData,
+      headers: {
+        "X-CSRFToken": csrfToken.value
+      },
+      credentials: "include", // important to send cookies
+    });
 
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+
+    const data = await res.json();
+    console.log("Movie Added!", data);
+  } catch (error) {
+    console.error("Error submitting movie:", error);
+  }
+};
+
+onMounted(getCSRFToken);
 </script>
-
-  
